@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Windows.Forms.PropertyGridInternal;
+using System;
 
 
 namespace ClipboardTTS
@@ -639,6 +640,9 @@ namespace ClipboardTTS
             {
                 string prevClipboardText = string.Empty;
 
+                // Read the banned dictionary file
+                string[] bannedWords = File.Exists("banned.dict") ? File.ReadAllLines("banned.dict") : new string[0];
+
                 // Read the ignore dictionary file
                 string[] ignoreWords = File.Exists("ignore.dict") ? File.ReadAllLines("ignore.dict") : new string[0];
 
@@ -670,7 +674,12 @@ namespace ClipboardTTS
                             string clipboardText = ClipboardService.GetText();
 
                             // Check if the clipboard text is null, empty, or unchanged
-                            if (string.IsNullOrEmpty(clipboardText) || clipboardText == prevClipboardText)
+                            if (string.IsNullOrEmpty(clipboardText) || clipboardText == prevClipboardText
+                                || clipboardText.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                                || clipboardText.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                                || clipboardText.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+                                || clipboardText.StartsWith("git@", StringComparison.OrdinalIgnoreCase)
+                                || clipboardText.StartsWith("\\\\G", StringComparison.OrdinalIgnoreCase))
                             {
                                 await Task.Delay(100);
                                 continue;
@@ -679,6 +688,12 @@ namespace ClipboardTTS
                             // Update the previous clipboard text
                             prevClipboardText = clipboardText;
 
+                            clipboardText = clipboardText.Replace('#', ' ');
+                            clipboardText = clipboardText.Replace('*', ' ');
+                            clipboardText = clipboardText.Replace('\n', ' ');
+                            clipboardText = clipboardText.Replace('\r', ' ');
+
+                            /*
                             // Skip processing the first clipboard change after monitoring is enabled
                             if (_isFirstClipboardChangeAfterMonitoring)
                             {
@@ -688,7 +703,7 @@ namespace ClipboardTTS
                             }
 
                             // Split the clipboard text into words
-                            string[] words = Regex.Split(clipboardText, @"\s+");
+                            string[] words = Regex.Split(clipboardText, @"[.?!/:\s]+");
 
                             // Filter out the ignored words
                             string filteredText = string.Join(" ", words.Where(word => !ignoreWords.Contains(word, StringComparer.OrdinalIgnoreCase)));
@@ -703,11 +718,12 @@ namespace ClipboardTTS
                                 }
                             }
                             string modifiedText = string.Join(" ", modifiedWords);
+                            */
 
                             // Write the modified text to the temporary file
                             try
                             {
-                                File.WriteAllText(TempFile, modifiedText);
+                                File.WriteAllText(TempFile, clipboardText);
                             }
                             catch (IOException ex)
                             {
@@ -783,22 +799,24 @@ namespace ClipboardTTS
                 return;
             }
 
+            /*
             if (Resources.ActiveIcon == null || Resources.IdleIcon == null)
             {
                 // Log an error or handle the case when icon resources are missing
                 System.Diagnostics.Debug.WriteLine("Icon resources are missing");
                 return;
             }
+            */
 
             if (state == ActivityState.Active)
             {
                 // Set the active icon
-                trayIcon.Icon = Resources.ActiveIcon;
+                //trayIcon.Icon = Resources.ActiveIcon;
             }
             else
             {
                 // Set the idle icon
-                trayIcon.Icon = Resources.IdleIcon;
+                //trayIcon.Icon = Resources.IdleIcon;
             }
         }
 
